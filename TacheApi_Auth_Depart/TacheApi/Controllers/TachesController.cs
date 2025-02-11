@@ -25,9 +25,11 @@ namespace TacheApi.Controllers
             _context = context;
         }
 
+        [Authorize]
         [EndpointSummary("Récupère toutes les tâches de l'utilisateur")]
         [EndpointDescription("Récupère toutes les tâches de l'utilisateur de la base de données")]
         [ProducesResponseType<IEnumerable<TacheDTO>>(StatusCodes.Status200OK, "application/json")]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<TacheDTO>>> GetTaches()
         {
@@ -36,9 +38,11 @@ namespace TacheApi.Controllers
                 .ToListAsync(); // Récupère les tâches sous forme de liste
         }
 
+        [Authorize]
         [EndpointSummary("Récupère une tâche de l'utilisateur")]
         [EndpointDescription("Récupère une tâche de l'utilisateur de la base de données en fonction de son identifiant")]
         [ProducesResponseType<TacheDetailsDTO>(StatusCodes.Status200OK, "application/json")]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [HttpGet("{id}")]
         public async Task<ActionResult<TacheDetailsDTO>> GetTache(
@@ -56,9 +60,11 @@ namespace TacheApi.Controllers
             return new TacheDetailsDTO(tache);
         }
 
+        [Authorize]
         [EndpointSummary("Met à jour une tâche de l'utilisateur")]
         [EndpointDescription("Met à jour une tâche de l'utilisateur de la base de données en fonction de son identifiant")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [HttpPut("{id}")]
@@ -84,6 +90,7 @@ namespace TacheApi.Controllers
         [EndpointSummary("Ajoute une tâche à l'utilisateur")]
         [EndpointDescription("Ajoute une tâche à l'utilisateur dans la base de données")]
         [ProducesResponseType<TacheDTO>(StatusCodes.Status201Created, "application/json")]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [HttpPost]
         public async Task<ActionResult<TacheDTO>> PostTache(
@@ -102,9 +109,11 @@ namespace TacheApi.Controllers
             );
         }
 
+        [Authorize("delete:taches")]
         [EndpointSummary("Supprime une tâche")]
         [EndpointDescription("Supprime une tâche de la base de données en fonction de son identifiant")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTache(

@@ -24,6 +24,7 @@ namespace TacheApi.Controllers
             _context = context;
         }
 
+        [Authorize]
         [EndpointSummary("Met à jour une étape d'une tâche")]
         [EndpointDescription("Met à jour une étape d'une tâche de la base de données en fonction de son identifiant")]
         [ProducesResponseType(StatusCodes.Status204NoContent)] // L'étape a été modifiée avec succès
@@ -56,7 +57,7 @@ namespace TacheApi.Controllers
             // Retourne une réponse vide (convention avec PUT) pour indiquer que l'opération a réussi
             return NoContent();
         }
-
+        [Authorize]
         [EndpointSummary("Ajoute une étape à une tâche")]
         [EndpointDescription("Ajoute une tâche à une tâche dans la base de données")]
         [ProducesResponseType<EtapeDTO>(StatusCodes.Status201Created, "application/json")]
@@ -87,10 +88,11 @@ namespace TacheApi.Controllers
             );
         }
 
+        [Authorize("delete:etapes")]
         [EndpointSummary("Supprime une étape d'une tâche")]
         [EndpointDescription("Supprime une étape d'une tâche de la base de données en fonction de son identifiant")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [HttpDelete("{idEtape}")]
         public async Task<IActionResult> DeleteEtape(
