@@ -17,11 +17,13 @@ namespace TacheApi.Controllers
     [ApiController]
     public class EtapesController : ControllerBase
     {
+        private readonly Auth0Service _auth0Service;
         private readonly AppDbContext _context;
 
-        public EtapesController(AppDbContext context)
+        public EtapesController(AppDbContext context, Auth0Service auth0Service)
         {
             _context = context;
+            _auth0Service = auth0Service;
         }
 
         [Authorize]
@@ -48,6 +50,11 @@ namespace TacheApi.Controllers
                 return NotFound();
             }
 
+            if (!TacheAppartientAUtilisateur(idTache, User))
+            {
+                return Forbid();
+            }
+
             // Applique les modifications à l'étape
             etape.AppliquerUpsertDTO(etapeDTO);
             _context.Entry(etape).State = EntityState.Modified;
@@ -70,6 +77,11 @@ namespace TacheApi.Controllers
             if (!TacheExiste(idTache))
             {
                 return NotFound();
+            }
+
+            if (!TacheAppartientAUtilisateur(idTache, User))
+            {
+                return Forbid();
             }
 
             Etape etape = new Etape(etapeDTO, idTache);
@@ -108,6 +120,11 @@ namespace TacheApi.Controllers
                 return NotFound();
             }
 
+            if (!TacheAppartientAUtilisateur(idTache, User))
+            {
+                return Forbid();
+            }
+
             _context.Etapes.Remove(etape);
             await _context.SaveChangesAsync();
 
@@ -122,6 +139,14 @@ namespace TacheApi.Controllers
         private bool TacheExiste(long id)
         {
             return _context.Taches.Any(e => e.Id == id);
+        }
+
+        private bool TacheAppartientAUtilisateur(long tacheId, ClaimsPrincipal utilisateur)
+        {
+            return _context.Taches.Any(tache =>
+                tache.Id == tacheId &&
+                tache.UserId == _auth0Service.ObtenirIdUtilisateur(utilisateur)
+            );
         }
     }
 }

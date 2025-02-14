@@ -18,11 +18,13 @@ namespace TacheApi.Controllers
     [ApiController]
     public class TachesController : ControllerBase
     {
+        private readonly Auth0Service _auth0Service;
         private readonly AppDbContext _context;
 
-        public TachesController(AppDbContext context)
+        public TachesController(AppDbContext context, Auth0Service auth0Service)
         {
             _context = context;
+            _auth0Service = auth0Service;
         }
 
         [Authorize]
@@ -34,6 +36,7 @@ namespace TacheApi.Controllers
         public async Task<ActionResult<IEnumerable<TacheDTO>>> GetTaches()
         {
             return await _context.Taches // Récupère les tâches
+                .Where(tache => tache.UserId == _auth0Service.ObtenirIdUtilisateur(User)) //Sélectionne seulement ceux du User
                 .Select(tache => new TacheDTO(tache)) // Transforme les tâches en TacheDTO
                 .ToListAsync(); // Récupère les tâches sous forme de liste
         }
@@ -43,6 +46,7 @@ namespace TacheApi.Controllers
         [EndpointDescription("Récupère une tâche de l'utilisateur de la base de données en fonction de son identifiant")]
         [ProducesResponseType<TacheDetailsDTO>(StatusCodes.Status200OK, "application/json")]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [HttpGet("{id}")]
         public async Task<ActionResult<TacheDetailsDTO>> GetTache(
@@ -57,6 +61,11 @@ namespace TacheApi.Controllers
                 return NotFound();
             }
 
+            if (!TacheAppartientAUtilisateur(id, User))
+            {
+                return Forbid();
+            }
+
             return new TacheDetailsDTO(tache);
         }
 
@@ -64,8 +73,9 @@ namespace TacheApi.Controllers
         [EndpointSummary("Met à jour une tâche de l'utilisateur")]
         [EndpointDescription("Met à jour une tâche de l'utilisateur de la base de données en fonction de son identifiant")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutTache(
@@ -79,6 +89,11 @@ namespace TacheApi.Controllers
                 return NotFound();
             }
 
+            if (!TacheAppartientAUtilisateur(id, User)) 
+            { 
+                return Forbid(); 
+            }
+
             tache.AppliquerUpsertDTO(tacheDTO);
             _context.Entry(tache).State = EntityState.Modified;
             await _context.SaveChangesAsync();
@@ -86,6 +101,7 @@ namespace TacheApi.Controllers
             return NoContent();
         }
 
+        [Authorize]
         [EndpointSummary("Ajoute une tâche à l'utilisateur")]
         [EndpointDescription("Ajoute une tâche à l'utilisateur dans la base de données")]
         [ProducesResponseType<TacheDTO>(StatusCodes.Status201Created, "application/json")]
@@ -96,7 +112,8 @@ namespace TacheApi.Controllers
             [FromBody][Description("La tâche à ajouter")] TacheUpsertDTO tacheDTO)
         {
             Tache tache = new Tache(
-                tacheDTO
+                tacheDTO,
+                _auth0Service.ObtenirIdUtilisateur(User)
             );
             _context.Taches.Add(tache);
             await _context.SaveChangesAsync();
@@ -127,10 +144,23 @@ namespace TacheApi.Controllers
                 return NotFound();
             }
 
+            if (!TacheAppartientAUtilisateur(id, User))
+            {
+                return Forbid();
+            }
+
             _context.Taches.Remove(tache);
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        private bool  TacheAppartientAUtilisateur(long tacheId, ClaimsPrincipal utilisateur)
+        {
+            return _context.Taches.Any(tache =>
+                tache.Id == tacheId &&
+                tache.UserId == _auth0Service.ObtenirIdUtilisateur(utilisateur)
+            );
         }
     }
 }
